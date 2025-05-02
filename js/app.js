@@ -1,134 +1,140 @@
-let codigos = localStorage.getItem('ejerciciosCod')
-    ? JSON.parse(localStorage.getItem('ejerciciosCod'))
-    : [];
-let nombres = localStorage.getItem('ejerciciosNom')
-    ? JSON.parse(localStorage.getItem('ejerciciosNom'))
-    : [];
-let calorias = localStorage.getItem('ejerciciosCal')
-    ? JSON.parse(localStorage.getItem('ejerciciosCal'))
-    : [];
+const ejercicios = [
+    {nombre: "running", display: "Correr", caloriasPorMinuto: 10},
+    {nombre: "walking", display: "Caminar", caloriasPorMinuto: 5},
+    {nombre: "cycling", display: "Ciclismo", caloriasPorMinuto: 8},
+    {nombre: "swimming", display: "Natación", caloriasPorMinuto: 12},
+    {nombre: "push ups", display: "Flexiones", caloriasPorMinuto: 8},
+    {nombre: "sit ups", display: "Abdominales", caloriasPorMinuto: 6},
+    {nombre: "squats", display: "Sentadillas", caloriasPorMinuto: 7},
+    {nombre: "jump rope", display: "Saltar cuerda", caloriasPorMinuto: 12}
+];
+//Variables
+let actividades = localStorage.getItem('actividades') ? JSON.parse(localStorage.getItem('actividades')) : [];
 
-let actEjercicio = localStorage.getItem('actividadEj')
-    ? JSON.parse(localStorage.getItem('actividadEj'))
-    : [];
-let actReps = localStorage.getItem('actividadReps')
-    ? JSON.parse(localStorage.getItem('actividadReps'))
-    : [];
-let actDuracion = localStorage.getItem('actividadDur')
-    ? JSON.parse(localStorage.getItem('actividadDur'))
-    : [];
-let actCalorias = localStorage.getItem('actividadCal')
-    ? JSON.parse(localStorage.getItem('actividadCal'))
-    : [];
-
-imprimirTablaEjercicios();
-imprimirTablaActividades();
-
-const formEj = document.getElementById('formulario_ejercicio');
-formEj.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-const nombre = document.getElementById('nombre_ejercicio').value.trim();
-const cal = parseInt(document.getElementById('calorias_ejercicio').value);
-
-//generar código uno por uno
-const codigoNuevo = codigos.length + 1;
-
-codigos.push(codigoNuevo);
-nombres.push(nombre);
-calorias.push(cal);
-
-localStorage.setItem('ejerciciosCod', JSON.stringify(codigos));
-localStorage.setItem('ejerciciosNom', JSON.stringify(nombres));
-localStorage.setItem('ejerciciosCal', JSON.stringify(calorias));
-
-formEj.reset();
-imprimirTablaEjercicios();
+//Para iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    cargarEjercicios();
+    cargarActividades();
+    configurarEventos();
 });
 
-const formAct = document.getElementById('formulario_actividad');
-formAct.addEventListener('submit', (e) => {
-e.preventDefault();
-const nomEj = document.getElementById('ejercicio_actividad').value.trim();
-const reps = parseInt(document.getElementById('cantidad_actividad').value);
-const dur = parseInt(document.getElementById('duracion_actividad').value);
-
-let idx = -1;
-nombres.forEach((n, i) => {
-    if (n === nomEj) idx = i;
-});
-
-if (idx === -1) {
-    alert('Ejercicio no encontrado, verifica el nombre.');
-    return;
-}
-
-const totalCal = Math.round(calorias[idx] *reps);
-
-//pa almacenar actividad
-actEjercicio.push(nomEj);
-actReps.push(reps);
-actDuracion.push(dur);
-actCalorias.push(totalCal);
-
-// pa guardar en el localStorage
-localStorage.setItem('actividadEj', JSON.stringify(actEjercicio));
-localStorage.setItem('actividadReps', JSON.stringify(actReps));
-localStorage.setItem('actividadDur', JSON.stringify(actDuracion));
-localStorage.setItem('actividadCal', JSON.stringify(actCalorias));
-
-//limpiar y refrescar tabla
-formAct.reset();
-imprimirTablaActividades();
-});
-
-//Pa imprimir
-function imprimirTablaEjercicios() {
+//Cargar ejercicios en select y tabla
+function cargarEjercicios() {
+    const select = document.getElementById('ejercicio_actividad');
     const tabla = document.getElementById('tabla_ejercicios');
+    
+    select.innerHTML = '<option value="">Selecciona ejercicio</option>';
     tabla.innerHTML = '';
-    codigos.forEach((c, i) => {
-    const tr = document.createElement('tr');
-    const td1 = document.createElement('td');
-    const td2 = document.createElement('td');
-    const td3 = document.createElement('td');
-
-    td1.textContent = c;
-    td2.textContent = nombres[i];
-    td3.textContent = calorias[i];
-
-    tr.appendChild(td1);
-    tr.appendChild(td2);
-    tr.appendChild(td3);
-    tabla.appendChild(tr);
-});
+    
+    // Llenar select y tabla
+    ejercicios.forEach(ej => {
+        // Option para el select
+        const option = document.createElement('option');
+        option.value = ej.nombre;
+        option.textContent = ej.display;
+        select.appendChild(option);
+        
+        // Nueva fila para tabla
+        const tr = document.createElement('tr');
+        
+        const tdNombre = document.createElement('td');
+        tdNombre.textContent = ej.display;
+        
+        const tdCalorias = document.createElement('td');
+        tdCalorias.textContent = ej.caloriasPorMinuto + ' cal/min';
+        
+        tr.appendChild(tdNombre);
+        tr.appendChild(tdCalorias);
+        tabla.appendChild(tr);
+    });
+};
+// funcion configurar eventos
+function configurarEventos() {
+    // Calcular calorías al cambiar de ejercicio
+    document.getElementById('ejercicio_actividad').addEventListener('change', calcularCalorias);
+    document.getElementById('duracion_actividad').addEventListener('input', calcularCalorias);
+    
+    // mandar al formulario
+    document.getElementById('formulario_actividad').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const ejercicio = document.getElementById('ejercicio_actividad').value;
+        const duracion = parseInt(document.getElementById('duracion_actividad').value);
+        //Evitar campos vacios
+        if (!ejercicio || isNaN(duracion)) {
+            alert('Completa todos los campos');
+            return;
+        }
+        
+        // Buscar el ejercicio
+        const ej = ejercicios.find(e => e.nombre === ejercicio);
+        const calorias = Math.round(ej.caloriasPorMinuto * duracion);
+        
+        // Crear la actividad
+        const actividad = {
+            nombre: ej.display,
+            duracion: duracion,
+            calorias: calorias,
+            fecha: new Date().toLocaleDateString()
+        };
+        
+        //Para guardar
+        actividades.push(actividad);
+        localStorage.setItem('actividades', JSON.stringify(actividades));
+        
+        // Limpiar y actualizar (This es para resetear la funcion en la q estamos)
+        this.reset();
+        cargarActividades();
+    });
 }
 
-function imprimirTablaActividades() {
+// Calcular calorías mas o menos
+function calcularCalorias() {
+    const ejercicio = document.getElementById('ejercicio_actividad').value;
+    const duracion = parseInt(document.getElementById('duracion_actividad').value) || 0;
+    
+    if (!ejercicio) return;
+    
+    const ej = ejercicios.find(e => e.nombre === ejercicio);
+    const calorias = Math.round(ej.caloriasPorMinuto * duracion);
+    
+    document.getElementById('calorias_estimadas').value = calorias;
+}
+
+// Cargar actividades en la tabla
+function cargarActividades() {
     const tabla = document.getElementById('tabla_actividades');
     tabla.innerHTML = '';
-    actEjercicio.forEach((ej, i) => {
-    const tr = document.createElement('tr');
-    const td1 = document.createElement('td');
-    const td2 = document.createElement('td');
-    const td3 = document.createElement('td');
-    const td4 = document.createElement('td');
-
-    td1.textContent = ej;
-    td2.textContent = actReps[i];
-    td3.textContent = actDuracion[i];
-    td4.textContent = actCalorias[i];
-
-    tr.appendChild(td1);
-    tr.appendChild(td2);
-    tr.appendChild(td3);
-    tr.appendChild(td4);
-    tabla.appendChild(tr);
-});
-
-//Pa reiniciar la pagina
+    
+    actividades.forEach(act => {
+        const tr = document.createElement('tr');
+        
+        const tdEjercicio = document.createElement('td');
+        tdEjercicio.textContent = act.nombre;
+        
+        const tdDuracion = document.createElement('td');
+        tdDuracion.textContent = act.duracion + ' min';
+        
+        const tdCalorias = document.createElement('td');
+        tdCalorias.textContent = act.calorias;
+        
+        const tdFecha = document.createElement('td');
+        tdFecha.textContent = act.fecha;
+        
+        tr.appendChild(tdEjercicio);
+        tr.appendChild(tdDuracion);
+        tr.appendChild(tdCalorias);
+        tr.appendChild(tdFecha);
+        
+        tabla.appendChild(tr);
+    });
 }
+
+// Reiniciar datos
 function reiniciarDatos() {
-    localStorage.clear();
-    alert('Datos reiniciados');
-    location.reload();
+    if (confirm('¿Borrar todos los datos?')) {
+        localStorage.removeItem('actividades');
+        actividades = [];
+        cargarActividades();
+    }
 }
